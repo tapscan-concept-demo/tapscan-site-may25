@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Analytics Animation Component</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ts-navy: #2F3886;
+    --ts-amber: #FFB855;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: "Montserrat", system-ui, sans-serif;
+  }
+
+  /* ───── THE COMPONENT ─────
+     Self-contained, drop into any container. Aspect ratio is enforced internally. */
+  .ts-hero-analytics {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(14px) saturate(120%);
+    -webkit-backdrop-filter: blur(14px) saturate(120%);
+    isolation: isolate;
+    color: #fff;
+    font-family: "Montserrat", system-ui, sans-serif;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      0 30px 60px -20px rgba(0,0,0,0.35);
+  }
+  .ts-hero-analytics .layer {
+    position: absolute; inset: 0;
+    will-change: opacity, filter;
+  }
+  .ts-hero-analytics svg { display: block; width: 100%; height: 100%; }
+  .ts-hero-analytics text { font-family: inherit; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ts-hero-analytics .layer { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div id="hero-analytics-mount"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel">
+const { useEffect, useRef, useState } = React;
+
+/* ───── Timing constants ─────
+   15s total loop, 3 phases of 5s each.
+   Each phase: 0.5s crossfade-in, 1.8s staggered build, 2.2s hold, 0.5s crossfade-out. */
+const LOOP = 15;
+const PHASE = 5;
+const FADE = 0.5;
+const BUILD = 1.8;
+
+/* ───── Layout grid ─────
+   640×360 (16:9) viewBox, P as single spacing unit. */
+const VB_W = 640, VB_H = 360;
+const P = 24;
+const CX0 = P, CY0 = P;
+const CW = VB_W - 2 * P;
+const CH = VB_H - 2 * P;
+
+const easeOut = (t) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
+const clamp01 = (t) => Math.max(0, Math.min(1, t));
+
+function phaseState(i, t) {
+  let dt = (((t - i * PHASE) % LOOP) + LOOP + LOOP / 2) % LOOP - LOOP / 2;
+  if (dt < -FADE || dt > PHASE + FADE) return { opacity: 0, build: 0 };
+  if (dt < FADE) return { opacity: (dt + FADE) / (FADE * 2), build: 0 };
+  if (dt < FADE + BUILD) return { opacity: 1, build: (dt - FADE) / BUILD };
+  if (dt < PHASE - FADE) return { opacity: 1, build: 1 };
+  return { opacity: (PHASE + FADE - dt) / (FADE * 2), build: 1 };
+}
+
+function useLoopTime(reduced) {
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    if (reduced) return;
+    let raf, start = performance.now();
+    const tick = (now) => {
+      setT(((now - start) / 1000) % LOOP);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [reduced]);
+  return t;
+}
+
+/* ───── Bar chart state ───── */
+const BARS = [
+  { label: "Walmart", value: 1.00 },
+  { label: "Costco",  value: 0.74 },
+  { label: "Target",  value: 0.59 },
+  { label: "Kroger",  value: 0.22 },
+  { label: "Aldi",    value: 0.10 },
+];
+const Y_TICKS = [
+  { y: 0.0,  label: "5,000" },
+  { y: 0.25, label: "3,750" },
+  { y: 0.50, label: "2,500" },
+  { y: 0.75, label: "1,250" },
+  { y: 1.0,  label: "0" },
+];
+
+function BarState({ build }) {
+  const yColW = 44;
+  const xLabelH = 18;
+  const barsX0 = CX0 + yColW + P;
+  const barsW  = CW - yColW - P;
+  const barsY0 = CY0;
+  const barsH  = CH - P - xLabelH;
+  const baseline = barsY0 + barsH;
+  const barW   = (barsW - P * (BARS.length - 1)) / BARS.length;
+
+  const axisOp = easeOut(clamp01(build / 0.30));
+
+  return (
+    <svg viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      {Y_TICKS.map((tick, i) => {
+        const y = barsY0 + tick.y * barsH;
+        return (
+          <text key={i}
+                x={CX0 + yColW} y={y + 5}
+                textAnchor="end"
+                fontSize="14" fontWeight="700"
+                fill="rgba(255,255,255,0.6)"
+                opacity={axisOp}>
+            {tick.label}
+          </text>
+        );
+      })}
+
+      {BARS.map((bar, i) => {
+        const stagger = i * 0.13;
+        const local = clamp01((build - stagger) / 0.48);
+        const grow = easeOut(local);
+        const fullH = bar.value * barsH;
+        const h = fullH * grow;
+        const bx = barsX0 + i * (barW + P);
+        const by = baseline - h;
+        const xLabelY = baseline + P + xLabelH * 0.75;
+        return (
+          <g key={bar.label}>
+            <rect x={bx} y={by}
+                  width={barW} height={Math.max(0.001, h)}
+                  rx="4"
+                  fill="rgba(255,255,255,0.15)"
+                  stroke="rgba(255,255,255,0.25)"
+                  strokeWidth="1" />
+            <text x={bx + barW / 2} y={xLabelY}
+                  textAnchor="middle"
+                  fontSize="14" fontWeight="700"
+                  fill="rgba(255,255,255,0.6)"
+                  opacity={axisOp}>
+              {bar.label}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ───── Donut state ───── */
+const SEGMENTS = [
+  { label: "English",    value: "14,820", pct: 0.50, opacity: 0.50 },
+  { label: "Spanish",    value: "3,250",  pct: 0.25, opacity: 0.38 },
+  { label: "French",     value: "1,200",  pct: 0.15, opacity: 0.28 },
+  { label: "Portuguese", value: "640",    pct: 0.10, opacity: 0.18 },
+];
+const TOTAL_ENGAGEMENTS = "19,910";
+
+function donutWedgePath(cx, cy, rIn, rOut, d1, d2) {
+  const sweep = d2 - d1;
+  if (sweep <= 0.001) return null;
+  if (sweep >= 179.9) {
+    const dm = (d1 + d2) / 2;
+    return [
+      singleWedge(cx, cy, rIn, rOut, d1, dm),
+      singleWedge(cx, cy, rIn, rOut, dm, d2),
+    ].join(" ");
+  }
+  return singleWedge(cx, cy, rIn, rOut, d1, d2);
+}
+function singleWedge(cx, cy, rIn, rOut, d1, d2) {
+  const polar = (r, deg) => {
+    const rad = (deg - 90) * Math.PI / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  };
+  const [x1o, y1o] = polar(rOut, d1);
+  const [x2o, y2o] = polar(rOut, d2);
+  const [x1i, y1i] = polar(rIn,  d1);
+  const [x2i, y2i] = polar(rIn,  d2);
+  const large = (d2 - d1) > 180 ? 1 : 0;
+  return `M ${x1o} ${y1o}
+          A ${rOut} ${rOut} 0 ${large} 1 ${x2o} ${y2o}
+          L ${x2i} ${y2i}
+          A ${rIn} ${rIn} 0 ${large} 0 ${x1i} ${y1i} Z`;
+}
+
+function DonutState({ build }) {
+  const donutD = CH;
+  const rOut = donutD / 2;
+  const thickness = rOut * 0.5;
+  const rIn = rOut - thickness;
+  const donutCX = CX0 + rOut;
+  const donutCY = CY0 + rOut;
+
+  const legendSwatch    = 34;
+  const legendInnerGap  = 14;
+  const legendTextW     = 110;
+  const legendBlockW    = legendSwatch + legendInnerGap + legendTextW;
+  const rightZoneLeft   = CX0 + donutD;
+  const rightZoneRight  = CX0 + CW;
+  const legendX         = (rightZoneLeft + rightZoneRight - legendBlockW) / 2;
+  const legendRowH      = 38;
+  const legendStackH    = 4 * legendRowH + 3 * P;
+  const legendY0        = CY0 + (CH - legendStackH) / 2;
+
+  let cumDeg = 0;
+  const segs = SEGMENTS.map((s) => {
+    const startDeg = cumDeg;
+    cumDeg += s.pct * 360;
+    return { ...s, startDeg, endDeg: cumDeg };
+  });
+
+  const sweepDeg = easeOut(clamp01(build / 0.78)) * 360;
+  const centerOp = easeOut(clamp01((build - 0.55) / 0.35));
+
+  return (
+    <svg viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <circle cx={donutCX} cy={donutCY} r={rOut - 0.5}
+              fill="none"
+              stroke="rgba(255,255,255,0.25)"
+              strokeWidth="1" />
+
+      {segs.map((s) => {
+        const d2 = Math.min(s.endDeg, sweepDeg);
+        const d = donutWedgePath(donutCX, donutCY, rIn, rOut, s.startDeg, d2);
+        if (!d) return null;
+        return (
+          <path key={s.label} d={d}
+                fill={`rgba(255,255,255,${s.opacity})`}
+                shapeRendering="geometricPrecision" />
+        );
+      })}
+
+      <g opacity={centerOp}>
+        <text x={donutCX} y={donutCY - 2}
+              textAnchor="middle"
+              fontSize="30" fontWeight="700"
+              fill="rgba(255,255,255,0.85)"
+              letterSpacing="-0.01em">
+          {TOTAL_ENGAGEMENTS}
+        </text>
+        <text x={donutCX} y={donutCY + 22}
+              textAnchor="middle"
+              fontSize="13" fontWeight="500"
+              fill="rgba(255,255,255,0.6)"
+              letterSpacing="0.02em">
+          Total Engagements
+        </text>
+      </g>
+
+      {segs.map((s, i) => {
+        const stagger = 0.30 + i * 0.11;
+        const rowOp = easeOut(clamp01((build - stagger) / 0.36));
+        const slide = (1 - rowOp) * 12;
+        const rowY = legendY0 + i * (legendRowH + P);
+        const cy = rowY + legendRowH / 2;
+        const textX = legendX + legendSwatch + legendInnerGap;
+        return (
+          <g key={s.label}
+             opacity={rowOp}
+             transform={`translate(${slide} 0)`}>
+            <rect x={legendX} y={cy - legendSwatch / 2}
+                  width={legendSwatch} height={legendSwatch} rx="8"
+                  fill={`rgba(255,255,255,${s.opacity})`}
+                  stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+            <text x={textX} y={cy - 3}
+                  fontSize="15" fontWeight="700"
+                  fill="rgba(255,255,255,0.85)">
+              {s.label}
+            </text>
+            <text x={textX} y={cy + 14}
+                  fontSize="12" fontWeight="500"
+                  fill="rgba(255,255,255,0.6)">
+              {s.value}  ·  {Math.round(s.pct * 100)}%
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ───── Insights state ───── */
+const INSIGHTS = [
+  "Engagement up 24% across priority retail markets this week.",
+  "Peak scan activity detected between 5pm and 7pm in-store.",
+  "Multilingual content driving 32% higher dwell time on average.",
+  "Tradeshow touchpoints surpassing campaign benchmarks by 18%.",
+];
+
+function InsightState({ build }) {
+  const rows = INSIGHTS.length;
+  const rowH = (CH - (rows - 1) * P) / rows;
+  const circleD = rowH;
+  const cardX = CX0 + circleD + P;
+  const cardW = CW - circleD - P;
+
+  return (
+    <svg viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      {INSIGHTS.map((txt, i) => {
+        const stagger = i * 0.14;
+        const local = clamp01((build - stagger) / 0.46);
+        const op = easeOut(local);
+        const slide = (1 - op) * 16;
+        const y = CY0 + i * (rowH + P);
+        const cy = y + rowH / 2;
+        return (
+          <g key={i} opacity={op} transform={`translate(0 ${slide})`}>
+            <circle cx={CX0 + circleD / 2} cy={cy} r={circleD / 2 - 0.5}
+                    fill="rgba(217,217,217,0.15)"
+                    stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+            <text x={CX0 + circleD / 2} y={cy + 8}
+                  textAnchor="middle"
+                  fontSize="22" fontWeight="700"
+                  fill="rgba(255,255,255,0.65)">
+              {i + 1}
+            </text>
+            <rect x={cardX} y={y}
+                  width={cardW} height={rowH} rx="8"
+                  fill="rgba(255,255,255,0.15)"
+                  stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+            <text x={cardX + P * 0.75} y={cy + 5}
+                  fontSize="14" fontWeight="600"
+                  fill="rgba(255,255,255,0.7)">
+              {txt}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ───── Top-level component ───── */
+function HeroAnalytics() {
+  const [reduced, setReduced] = useState(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = (e) => setReduced(e.matches);
+    mq.addEventListener?.("change", handler);
+    return () => mq.removeEventListener?.("change", handler);
+  }, []);
+
+  const t = useLoopTime(reduced);
+
+  if (reduced) {
+    return (
+      <div className="ts-hero-analytics" role="img"
+           aria-label="Analytics summary with donut chart, key insights, and bar metrics.">
+        <div className="layer" style={{ opacity: 1 }}>
+          <DonutState build={1} />
+        </div>
+      </div>
+    );
+  }
+
+  const phases = [0, 1, 2].map((i) => phaseState(i, t));
+
+  return (
+    <div className="ts-hero-analytics" role="img"
+         aria-label="Animated analytics card cycling through bar chart, donut chart, and insights.">
+      <div className="layer" style={{
+        opacity: phases[0].opacity,
+        filter: phases[0].opacity < 1 ? `blur(${(1 - phases[0].opacity) * 4}px)` : "none",
+      }}>
+        <BarState build={phases[0].build} />
+      </div>
+      <div className="layer" style={{
+        opacity: phases[1].opacity,
+        filter: phases[1].opacity < 1 ? `blur(${(1 - phases[1].opacity) * 4}px)` : "none",
+      }}>
+        <DonutState build={phases[1].build} />
+      </div>
+      <div className="layer" style={{
+        opacity: phases[2].opacity,
+        filter: phases[2].opacity < 1 ? `blur(${(1 - phases[2].opacity) * 4}px)` : "none",
+      }}>
+        <InsightState build={phases[2].build} />
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("hero-analytics-mount")).render(<HeroAnalytics />);
+</script>
+</body>
+</html>
