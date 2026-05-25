@@ -1,0 +1,189 @@
+/* ──────────────────────────────────────────────────────────────
+ * TapScan Design System — Foundations
+ * Colors, typography, spacing, radii, shadows.
+ * Source of truth for any product surface (website, kit, slides).
+ * ────────────────────────────────────────────────────────────── */
+
+/* Fonts — Montserrat (Google Fonts). If self-hosting, place .woff2
+ * files in /fonts and switch @import for @font-face declarations. */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap");
+
+:root {
+  /* ── Core palette ─────────────────────────────────────────── */
+
+  /* Brand navy — primary action + headings + nav surfaces */
+  --ts-navy-900: #0F1111;        /* near-black (deep surfaces) */
+  --ts-navy-800: #1C2250;        /* body-on-light ink */
+  --ts-navy-700: #212331;        /* default text */
+  --ts-navy-600: #2F3886;        /* ★ brand primary (wordmark, hero, buttons) */
+  --ts-navy-500: #333D97;        /* navy hover / deep surface tint */
+  --ts-navy-400: #4B5BB0;        /* (derived) mid navy */
+
+  /* Indigo — soft surfaces, pills, accents */
+  --ts-indigo-600: #6976E7;      /* cards, icon chips */
+  --ts-indigo-500: #7C86D8;      /* stroke on tinted cards */
+  --ts-indigo-400: #A1AAFF;      /* decorative fill */
+  --ts-indigo-300: #BAC1FF;      /* pill fill */
+  --ts-indigo-200: #D4D9FF;      /* card bg tint (light mode) */
+  --ts-indigo-150: #DDDFEE;      /* borders */
+  --ts-indigo-100: #F5F6FF;      /* section wash */
+
+  /* Amber — secondary brand accent + primary CTA */
+  --ts-amber-600: #E99623;       /* hover of amber CTA */
+  --ts-amber-500: #FFB855;       /* ★ primary amber (CTA, "Scan" wordmark) */
+  --ts-amber-400: #FFCF8C;       /* chip fill */
+  --ts-amber-300: #FFD292;       /* chip fill (alt) */
+  --ts-amber-200: #FFDFB3;       /* subtle tint */
+  --ts-amber-100: #F9DCB3;       /* border accent */
+  --ts-amber-050: #FFF6EA;       /* softest wash */
+  --ts-amber-025: #FFFAF3;       /* near-white amber */
+
+  /* Semantic */
+  --ts-success: #5EA852;         /* success / positive */
+  --ts-warning: #FFB855;         /* shares amber */
+  --ts-danger:  #BF2540;         /* error / destructive */
+  --ts-hot:     #FF4D00;         /* hot-take accent (rare) */
+  --ts-lime:    #4BFF1D;         /* data viz only */
+
+  /* Neutrals */
+  --ts-white:   #FFFFFF;
+  --ts-paper:   #FFFFFF;
+  --ts-gray-900: #0F1111;
+  --ts-gray-700: #444444;
+  --ts-gray-500: #7A7D8F;
+  --ts-gray-300: #B1B6D5;        /* strokes on tinted surfaces */
+  --ts-gray-200: #DDDFEE;
+  --ts-gray-100: #EFF1F7;
+  --ts-gray-050: #F7F8FB;
+
+  /* Shadows (mostly very subtle; the system relies on rounded blocks
+   * and tinted backgrounds more than on shadows) */
+  --ts-shadow-sm:   0 1px 2px rgba(15, 17, 17, 0.06);
+  --ts-shadow-md:   0 4px 12px rgba(15, 17, 17, 0.08);
+  --ts-shadow-lg:   0 12px 28px rgba(15, 17, 17, 0.10);
+  --ts-shadow-hero: 4px 4px 4px rgba(0, 0, 0, 0.25),
+                   -4px -4px 4px rgba(0, 0, 0, 0.25); /* hero headline */
+
+  /* Radii */
+  --ts-radius-xs: 4px;   /* nav buttons, small pills */
+  --ts-radius-sm: 6px;
+  --ts-radius-md: 8px;   /* ★ default button / card */
+  --ts-radius-lg: 12px;  /* larger cards */
+  --ts-radius-xl: 16px;  /* feature cards */
+  --ts-radius-2xl: 20px;
+  --ts-radius-full: 999px;
+
+  /* Spacing scale (8pt grid) */
+  --ts-space-1:  4px;
+  --ts-space-2:  8px;
+  --ts-space-3:  12px;
+  --ts-space-4:  16px;
+  --ts-space-5:  24px;
+  --ts-space-6:  32px;
+  --ts-space-7:  48px;
+  --ts-space-8:  64px;
+  --ts-space-9:  96px;
+  --ts-space-10: 128px;
+
+  /* Type family */
+  --ts-font-sans: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  --ts-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Semantic surface/text */
+  --ts-bg:        var(--ts-white);
+  --ts-bg-subtle: var(--ts-indigo-100);
+  --ts-bg-wash:   var(--ts-amber-050);
+  --ts-bg-deep:   var(--ts-navy-600);
+
+  --ts-fg:        var(--ts-navy-700);   /* body — #212331 */
+  --ts-fg-strong: var(--ts-navy-700);   /* headings on light — always #212331 */
+  --ts-fg-muted:  var(--ts-gray-500);
+  --ts-fg-invert: var(--ts-white);
+  --ts-link:      var(--ts-navy-600);
+  --ts-link-hover: var(--ts-navy-500);
+
+  --ts-border:    var(--ts-gray-200);
+  --ts-border-strong: var(--ts-gray-300);
+
+  /* Motion */
+  --ts-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ts-dur-fast: 120ms;
+  --ts-dur: 180ms;
+  --ts-dur-slow: 320ms;
+}
+
+/* ────────────────────────────────────────────────────────────
+ * Typography
+ * Montserrat across the board. Headings are Bold (700), body is
+ * Medium (500), emphasized body is SemiBold (600), micro-meta is
+ * Medium small-caps-ish. The brand relies on weight+size contrast
+ * more than on family contrast.
+ * ──────────────────────────────────────────────────────────── */
+
+body, html {
+  font-family: var(--ts-font-sans);
+  color: var(--ts-fg);
+  background: var(--ts-bg);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Display — hero, landing headlines. Signature: Montserrat BLACK (900)
+ * for headlines, LIGHT (300) for the following subheading, and a
+ * trailing period in gold (#FFB855) or blue (#2F3886). */
+.ts-display-1 {
+  font-family: var(--ts-font-sans);
+  font-weight: 900;
+  font-size: 64px;
+  line-height: 1.0;
+  letter-spacing: -0.015em;
+  color: var(--ts-fg-strong);
+}
+.ts-display-2 {
+  font-weight: 900;
+  font-size: 48px;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.ts-subhead {
+  font-weight: 300;
+  font-size: 28px;
+  line-height: 1.2;
+  color: var(--ts-fg-strong);
+}
+.ts-dot-gold::after { content: "."; color: var(--ts-amber-500); }
+.ts-dot-blue::after { content: "."; color: var(--ts-navy-600); }
+
+/* Section titles — Black for prominence, Light for quieter headings */
+h1, .ts-h1 { font-weight: 900; font-size: 40px; line-height: 1.1; color: var(--ts-fg-strong); }
+h2, .ts-h2 { font-weight: 900; font-size: 32px; line-height: 1.15; color: var(--ts-fg-strong); }
+h3, .ts-h3 { font-weight: 900; font-size: 24px; line-height: 1.2; color: var(--ts-fg-strong); }
+h4, .ts-h4 { font-weight: 700; font-size: 20px; line-height: 1.25; color: var(--ts-fg-strong); }
+h5, .ts-h5 { font-weight: 600; font-size: 16px; line-height: 1.3; color: var(--ts-fg-strong); }
+
+/* Body + utility */
+.ts-lede     { font-weight: 500; font-size: 18px; line-height: 1.5; color: var(--ts-fg); }
+.ts-body     { font-weight: 500; font-size: 15px; line-height: 1.55; color: var(--ts-fg); }
+.ts-body-sm  { font-weight: 500; font-size: 13px; line-height: 1.5; color: var(--ts-fg); }
+.ts-caption  { font-weight: 500; font-size: 12px; line-height: 1.4; color: var(--ts-fg-muted); }
+.ts-meta     { font-weight: 700; font-size: 11px; line-height: 1.2; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ts-fg-muted); }
+
+.ts-emph   { font-weight: 600; }
+.ts-strong { font-weight: 700; color: var(--ts-fg-strong); }
+
+/* Brand wordmark split — navy "Tap" + amber "Scan" style tag */
+.ts-wordmark {
+  font-family: var(--ts-font-sans);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+.ts-wordmark .tap  { color: var(--ts-navy-600); }
+.ts-wordmark .scan { color: var(--ts-amber-500); }
+
+/* Links */
+a { color: var(--ts-link); text-decoration: none; transition: color var(--ts-dur) var(--ts-ease); }
+a:hover { color: var(--ts-link-hover); text-decoration: underline; text-underline-offset: 3px; }
